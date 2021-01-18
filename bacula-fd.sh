@@ -20,9 +20,12 @@ else
     sudo -H /bin/bash -c 'mkdir -p /var/lib/pgsql/data/{main,zud}/dump/'
     sudo -H /bin/bash -c 'pdpl-file 3:0:0:ccnr /var/lib/pgsql/data/main/dump/'
     sudo -H /bin/bash -c 'cp scripts/*database_backup* /etc/bacula/scripts/'
-    Job="Job {\n  Name = \"KSA\"\n  JobDefs = \"DefaultJob\"\n  Level = Full\n  FileSet=\"KSA\"\n  Schedule = \"KSA\"\n  Client = $HostName\n  Client Run Before Job = \"/etc/bacula/scripts/make_database_backup\"\n  Client Run After Job  = \"/etc/bacula/scripts/delete_database_backup\"\n  Priority = 9\n}"
-    FileSet="FileSet {\nName = \"KSA\"\nInclude {\nOptions {\n  signature = MD5\n  aclsupport = yes\n  xattrsupport = yes\n}\nFile = /var/lib/pgsql/data/main/globalobjects_main.sql\nFile = /var/lib/pgsql/data/zud/globalobjects_zud.sql\nFile = \"|/etc/bacula/scripts/listdbdump $IpAddr 5432 5433\"\n}\n}"
-    echo -e $FileSet  | ssh user@$DirName "sudo -H /bin/bash -c 'cat > /etc/bacula/fileset.d/$HostName.conf'"
+    for i in ('basudb' 'ordl_battle' 'upi_admin' 'upi_battle' 'pool.d' 'oper_full' 'KSA')
+    do
+      Job=${Job}"\n""Job {\n  Name = \"$i\"\n  JobDefs = \"DefaultJob\"\n  Level = Full\n  FileSet=\"$i\"\n  Schedule = \"$i\"\n  Client = $HostName\n  Client Run Before Job = \"/etc/bacula/scripts/make_database_backup $i\"\n  Client Run After Job  = \"/etc/bacula/scripts/delete_database_backup\"\n  Priority = 9\n}"
+      FileSet=${FileSet}"\n""FileSet {\nName = \"KSA\"\nInclude {\nOptions {\n  signature = MD5\n  aclsupport = yes\n  xattrsupport = yes\n}\nFile = /var/lib/pgsql/data/main/globalobjects_main.sql\nFile = /var/lib/pgsql/data/zud/globalobjects_zud.sql\nFile = \"|/etc/bacula/scripts/listdbdump $IpAddr 5432 5433\"\n}\n}"
+      echo -e $FileSet  | ssh user@$DirName "sudo -H /bin/bash -c 'cat > /etc/bacula/fileset.d/$HostName.conf'"
+    done
     echo -e "Client {\nName = $HostName\nAddress = $IpAddr\nFDPort = 9102\nCatalog = BaculaCatalog\nPassword = \"clientpass\"\nFile Retention = 1 days\nJob Retention = 1 days\nAutoPrune = yes\n}" | ssh user@$DirName "sudo -H /bin/bash -c 'cat > /etc/bacula/client.d/$HostName.conf'"
   else
     Job="Job {\n  Name = $HostName\n  Type = Backup\n  JobDefs = \"DefaultJob\"\n  Client = $HostName\n  FileSet=\"DL\"\n  Schedule = \"DL\"\n  Messages = Standard\n}"
