@@ -33,3 +33,12 @@ sudo -H /bin/bash -c "echo -e \"FileDaemon {\nName = $HostName\nFDport = 9102\nW
 echo -e $Job  | ssh user@$DirName "sudo -H /bin/bash -c 'cat > /etc/bacula/job.d/$HostName.conf'"
 sudo -H /bin/bash -c 'systemctl restart bacula-fd.service'
 sudo -H /bin/bash -c 'systemctl enable bacula-fd.service'
+status=`systemctl status bacula-fd | grep "Active" | awk '{ print $2 }'`
+if [ $status == 'active' ]; then
+    echo -e "\e[32mСлужба bacula-fd установлена. Ошибок нет.\e[0m"
+else
+    echo -e "\e[31mВо времия запуска службы bacula-fd возникла ошибка.\e[0m"
+    echo -e "\e[31mПроверьте конфигурационные файлы\e[0m"
+    echo `/usr/sbin/bacula-fd -t -c /etc/bacula/bacula-fd.conf`
+fi
+exit 0

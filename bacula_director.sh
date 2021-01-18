@@ -1,7 +1,9 @@
 #!/bin/bash
-export WanAddr=`ifconfig wan |grep netmask | awk {'print $2'} | sed -E 's/(\.[^.]+){0}($)//g; s/,$//'`
-export LanAddr=`ifconfig lan |grep netmask | awk {'print $2'} | sed -E 's/(\.[^.]+){0}($)//g; s/,$//'`
-export HostName=`hostname`
+WanAddr=`ifconfig wan |grep netmask | awk {'print $2'} | sed -E 's/(\.[^.]+){0}($)//g; s/,$//'`
+LanAddr=`ifconfig lan |grep netmask | awk {'print $2'} | sed -E 's/(\.[^.]+){0}($)//g; s/,$//'`
+HostName=`hostname`
+Dirs=('schedule.d' 'client.d' 'fileset.d' 'job.d' 'pool.d')
+
 DirIp="25"
 KSAIp="1"
 DirIpAddr=$WanAddr
@@ -14,49 +16,41 @@ echo -e "@|\"sh -c 'for f in /etc/bacula/fileset.d/*.conf ; do echo @\${f} ; don
 echo -e "@|\"sh -c 'for f in /etc/bacula/schedule.d/*.conf ; do echo @\${f} ; done'\"" >> /etc/bacula/bacula-dir.conf
 echo -e "@|\"sh -c 'for f in /etc/bacula/pool.d/*.conf ; do echo @\${f} ; done'\"" >> /etc/bacula/bacula-dir.conf
 
-# Добавить проверку на существование
-mkdir /etc/bacula/schedule.d/
-mkdir /etc/bacula/client.d/
-mkdir /etc/bacula/fileset.d/
-mkdir /etc/bacula/job.d/
-mkdir /etc/bacula/pool.d/
+for j in ${Dirs[@]}
+do
+  if ! [ -d /etc/bacula/$j/ ]; then
+    mkdir /etc/bacula/$j/
+  fi
+  cp $j/*.conf /etc/bacula/$j/
+done
 
-cp schedule.d/*.conf /etc/bacula/schedule.d/
-#cp client.d/*.conf /etc/bacula/client.d/
-cp fileset.d/*.conf /etc/bacula/fileset.d/
-cp job.d/*.conf /etc/bacula/job.d/
-cp pool.d/*.conf /etc/bacula/pool.d/
 echo -e "Job {\nName = \"RestoreFiles\"\nType = Restore\nClient = $HostName\nFileSet=\"DL\"\nStorage = $HostName\nPool = DL\nMessages = Standard\nWhere = /restore\n}" > /etc/bacula/job.d/restore.conf
 echo -e "Client {\nName = $HostName\nAddress = $WanAddr\nFDPort = 9102\nCatalog = BaculaCatalog\nPassword = \"clientpass\"\nFile Retention = 1 days\nJob Retention = 1 days\nAutoPrune = yes\n}" > /etc/bacula/client.d/$HostName.conf
 cp scripts/listdbdump /etc/bacula/scripts/listdbdump
 cp scripts/delete_catalog_backup /etc/bacula/scripts/delete_catalog_backup
 cp scripts/clean.sh /etc/bacula/scripts/clean.sh
-
 chmod 644 /etc/bacula/bacula-dir.conf
 chown root:bacula /etc/bacula/bacula-dir.conf
-chmod 755 /etc/bacula/job.d/
-chown root:bacula /etc/bacula/job.d/
-chmod 644 /etc/bacula/job.d/*
-chown root:bacula /etc/bacula/job.d/*
-chmod 755 /etc/bacula/client.d/
-chown root:bacula /etc/bacula/client.d/
-chmod 644 /etc/bacula/client.d/*
-chown root:bacula /etc/bacula/client.d/*
-chmod 755 /etc/bacula/fileset.d/
-chown root:bacula /etc/bacula/fileset.d/
-chmod 644 /etc/bacula/fileset.d/*
-chown root:bacula /etc/bacula/fileset.d/*
-chmod 755 /etc/bacula/schedule.d/
-chown root:bacula /etc/bacula/schedule.d/
-chmod 644 /etc/bacula/schedule.d/*
-chown root:bacula /etc/bacula/schedule.d/*
-chmod 755 /etc/bacula/pool.d/
-chown root:bacula /etc/bacula/pool.d/
-chmod 644 /etc/bacula/pool.d/*
-chown root:bacula /etc/bacula/pool.d/*
+for j in ${Dirs[@]}
+do
+  chmod 755 /etc/bacula/$j/
+  chown root:bacula /etc/bacula/$j/
+  chmod 644 /etc/bacula/$j/*
+  chown root:bacula /etc/bacula/$j/*
+done
+
 mv   /etc/bacula/bat.conf /etc/bacula/backup-default-conf/bat.conf
 mv   /etc/bacula/bconsole.conf /etc/bacula/backup-default-conf/bconsole.conf
 echo -e "Director {\nName = $HostName\nDIRport = 9101\naddress = $DirIpAddr\nPassword = \"dirpass\"\n}" > /etc/bacula/bat.conf
 echo -e "Director {\nName = $HostName\nDIRport = 9101\naddress = $DirIpAddr\nPassword = \"dirpass\"\n}" > /etc/bacula/bconsole.conf
 systemctl restart bacula-director.service
 systemctl enable bacula-director.service
+status=`systemctl status bacula-director.service | grep "Active" | awk '{ print $2 }'`
+if [ $status == 'active' ]; then
+    echo -e "\e[32mСлужба bacula-director установлена. Ошибок нет.\e[0m"
+else
+    echo -e "\e[31mВо времия запуска службы bacula-director возникла ошибка.\e[0m"
+    echo -e "\e[31mПроверьте конфигурационные файлы\e[0m"
+    echo `/usr/sbin/bacula-director -t -c /etc/bacula/bacula-director.conf`
+fi
+exit 0

@@ -65,11 +65,13 @@ setfacl -m u:postgres:rx /etc/parsec/capdb
 
 pdpl-user bacula -l 0:0
 
-mkdir /etc/bacula/schedule.d/
-mkdir /etc/bacula/client.d/
-mkdir /etc/bacula/fileset.d/
-mkdir /etc/bacula/job.d/
-mkdir /etc/bacula/pool.d/
+for j in ('schedule.d' 'client.d' 'fileset.d' 'job.d' 'pool.d')
+do
+  if ! [ -d /etc/bacula/$j/ ]; then
+    mkdir /etc/bacula/$j/
+  fi
+  cp $j/*.conf /etc/bacula/$j/
+done
 
 # запускаем скрипты
 /usr/share/bacula-director/make_postgresql_tables
