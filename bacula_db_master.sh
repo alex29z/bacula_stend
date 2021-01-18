@@ -4,6 +4,7 @@ export NET=`ifconfig lan |grep netmask | awk {'print $2'} | sed -E 's/(\.[^.]+){
 export LAN_SS=$NET"$HOST_SS"
 export BACULA="bacula"
 export BACULA_PSWD="bacula"
+Dirs=('schedule.d' 'client.d' 'fileset.d' 'job.d' 'pool.d')
 
 # Вносим изменения в файлы конфигурации postgresql:
 cp /etc/postgresql/9.6/main/postgresql.conf /etc/postgresql/9.6/main/postgresql.conf_bak
@@ -65,7 +66,7 @@ setfacl -m u:postgres:rx /etc/parsec/capdb
 
 pdpl-user bacula -l 0:0
 
-for j in ('schedule.d' 'client.d' 'fileset.d' 'job.d' 'pool.d')
+for j in ${Dirs[@]}
 do
   if ! [ -d /etc/bacula/$j/ ]; then
     mkdir /etc/bacula/$j/
