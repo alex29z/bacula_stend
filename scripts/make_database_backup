@@ -1,0 +1,29 @@
+#!/bin/sh
+exec &> /dev/null
+DIR=/var/lib/pgsql/data/
+export PGUSER=postgres
+export PGPWD=11111111
+for Port in {5432,5433}
+do
+  if [[ $Port == 5432 ]]
+  then
+    DUMPDIR=$DIR/main
+    globalobjects=globalobjects_main
+  elif [[ $Port == 5433 ]]
+then
+  DUMPDIR=$DIR/zud
+  globalobjects=globalobjects_zud
+fi
+FIFODIR=$DUMPDIR/dump
+/usr/bin/pg_dumpall -p $Port -g >$DUMPDIR/$globalobjects.sql
+rm -f $FIFODIR/*.*
+for dbname in `psql -p $Port -d template1 -q -t <<EOF
+select datname from pg_database where not datname in ('bacula','template0','upi_battle','upi_study','upi_test','ordl-test','ordl-study','sfofi-test','basu-test','sodo-test') order by datname;
+EOF
+`
+do
+/usr/bin/pg_dump -p $Port -U $PGUSER -c -C -d $dbname --file=$FIFODIR/$dbname.sql 2>&1 < /dev/null &
+wait
+done
+done
+exit=0

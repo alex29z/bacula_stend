@@ -1,0 +1,7 @@
+#!/bin/sh
+DIR=/var/lib/pgsql/data/
+for SubDir in {main,zud}
+do
+rm -f $DIR/$SubDir/*sql
+rm -f $DIR/$SubDir/dump/*sql
+done
