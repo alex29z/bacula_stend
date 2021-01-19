@@ -1,0 +1,2 @@
+1. sudo -H /bin/bash -c 'pdpl-file -R 3:0:0:ccnr /var/lib/pgsql/data/main/dump/' начинать с /var/lib/pgsql/ и до конца
+2. отдельный формат FileSet для задачи oper_full

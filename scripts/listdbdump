@@ -1,8 +1,20 @@
 #!/bin/sh
-DUMPDIR=/var/lib/pgsql/data
-for Port in {$2,$3}
+# формат вызова listdbdump -ip <IP_адрес_сервера> --p <порт1 порт2 ... портN>
+while [ -n "$1" ]
 do
-  for dbname in `psql -d template1 -q -U postgres -h $1 -p $Port -t  <<EOF
+case "$1" in
+-ip) export Host="$2"
+shift ;;
+--p) shift
+break ;;
+*) echo "$1 is not an option";;
+esac
+shift
+done
+DUMPDIR=/var/lib/pgsql/data
+for Port in "$@"
+do
+  for dbname in `psql -d template1 -q -U postgres -h $Host -p $Port -t  <<EOF
     select datname from pg_database where not datname in ('bacula','template0') order by datname;
 EOF
 `
@@ -14,8 +26,8 @@ EOF
     then
       echo "$DUMPDIR/zud/dump/$dbname.sql"
     else
-      echo "Порт $Port не поддерживает соединения с БД"
-      exit 1
+    echo "Порт $Port не поддерживает соединения с БД"
+    exit 1
     fi
   done
 done
